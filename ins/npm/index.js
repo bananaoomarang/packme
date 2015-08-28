@@ -3,10 +3,17 @@ var Bluebird  = require('bluebird');
 var Path      = require('path');
 var objectMap = require('../../lib/objectMap');
 
+var installScript =`
+local _npmdir="$pkdir/usr/lib/node_modules"
+mkdir -p $_npmdir
+cd $_npmdir
+npm i -g --prefix "$pkgdir/usr" $pkgname@$pkgver
+`;
+
 var wreckNpm = Wreck.defaults({
     baseUrl: 'http://registry.npmjs.org/',
     json: true
-})
+});
 
 Bluebird.promisifyAll(wreckNpm);
 
@@ -30,19 +37,58 @@ var transform = {
     }
 };
 
-function defaultVal(x, val) {
-    if(!x)
-        x = val;
+function defaultVal(obj, key, val) {
+    if(!obj[key])
+        obj[key] = val;
 }
 
-module.exports = function (pkgname) {
+module.exports = function npmin(pkgname, pkgCache) {
+    if(!pkgCache)
+        pkgCache = {};
+
     return wreckNpm
         .getAsync(Path.join(pkgname, 'latest'))
             .spread(function (res, body) {
-                var transformed = objectMap(body, transform);
+                var pkgJSON = objectMap(body, transform);
 
-                defaultVal(transformed.arch, 'any');
+                defaultVal(pkgJSON, 'arch', ['any']);
+                defaultVal(pkgJSON, 'pkgrel', '1');
 
-                return transformed;
+                var depends = [];
+                var makeDepends = [];
+
+                if(pkgJSON.depends)
+                   depends = pkgJSON.depends.map(function (dep) {
+                        if(pkgCache[dep])
+                            return Bluebird.resolve(dep);
+
+                        return npmin(dep, pkgCache)
+                            .then(function (result) {
+                                return result;
+                            });
+                    });
+
+                if(pkgJSON.makeDepends)
+                    makeDepends = pkgJSON.makeDepends.map(function (dep) {
+                        if(pkgCache[dep])
+                            return Bluebird.resolve(dep);
+
+                        return npmin(dep, pkgCache)
+                            .then(function (result) {
+                                return result;
+                            });
+                    });
+
+
+
+                return Bluebird.all(
+                    depends.concat(makeDepends)
+                )
+                .tap(function (pkgJSON2) {
+                    pkgCache[pkgJSON2.pkgname] = true;
+
+                    pkgJSON.package = installScript;
+                })
+                .return(pkgJSON);
             });
 }

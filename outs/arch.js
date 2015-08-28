@@ -80,5 +80,7 @@ module.exports = function (cfg) {
             PKGBUILD += func + '\n';
         });
 
-    return PKGBUILD;
+    return {
+        PKGBUILD: PKGBUILD
+    };
 }

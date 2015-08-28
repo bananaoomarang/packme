@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
-var Path = require('path');
-var Fs   = require('fs');
+var Path     = require('path');
+var Fs       = require('fs');
+var Bluebird = require('bluebird');
+
+Bluebird.promisifyAll(Fs);
 
 var argv = require('yargs')
   .usage('Usage: packme <package> <infrom> <outto>')
@@ -14,11 +17,17 @@ var outto   = argv._[2];
 
 var pkgdir  = Path.join(process.cwd(), package);
 
-var _in = require(Path.join(process.cwd(), 'ins',  infrom))
-var out = require(Path.join(process.cwd(), 'outs', outto));
+var _in = require(Path.join('../ins',  infrom))
+var out = require(Path.join('../outs', outto));
 
 _in(package)
   .then(out)
   .then(function (result) {
-      console.log(result);
+      return Bluebird.all(
+          Object
+              .keys(result)
+              .map(function (key) {
+                  return Fs.writeFileAsync(key, result[key]);
+              })
+      );
   });
