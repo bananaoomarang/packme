@@ -22,7 +22,11 @@ var transform = {
     },
 
     dependencies: function (deps) {
-        return Object.keys(deps);
+        return { key: 'depends', val: Object.keys(deps) };
+    },
+
+    devDependencies: function (deps) {
+        return { key: 'makeDepends', val: Object.keys(deps) };
     }
 };
 
