@@ -1,3 +1,3 @@
 # Packme
 
-### The package management Gothan deserves
+![Oh my oh me](examples/lodash.gif)
