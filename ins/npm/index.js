@@ -7,6 +7,7 @@ var installScript =`
 local _npmdir="$pkdir/usr/lib/node_modules"
 mkdir -p $_npmdir
 cd $_npmdir
+ls
 npm i -g --prefix "$pkgdir/usr" $npmpkgname@$pkgver
 `;
 
