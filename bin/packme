@@ -3,6 +3,7 @@
 var Path     = require('path');
 var Fs       = require('fs');
 var Bluebird = require('bluebird');
+var Mkdirp   = Bluebird.promisify(require('mkdirp'));
 
 Bluebird.promisifyAll(Fs);
 
@@ -20,14 +21,35 @@ var pkgdir  = Path.join(process.cwd(), package);
 var _in = require(Path.join('../ins',  infrom))
 var out = require(Path.join('../outs', outto));
 
-_in(package)
-  .then(out)
-  .then(function (result) {
-      return Bluebird.all(
-          Object
-              .keys(result)
-              .map(function (key) {
-                  return Fs.writeFileAsync(key, result[key]);
-              })
-      );
-  });
+var pkgCache = {};
+
+function main(pkg, i, o) {
+    return i(pkg)
+        .tap(function (result) {
+            return Bluebird.all(
+                Object
+                  .keys(result.depends)
+                  .map(function (dep) {
+                      if(pkgCache[dep])
+                          return dep;
+
+                      pkgCache[dep] = true;
+
+                      return main(dep, _in, out);
+                  })
+            );
+        })
+        .then(o)
+        .then(function (result) {
+            return Bluebird.all(
+                Object.keys(result)
+            )
+            .tap(Mkdirp.bind(null, pkg))
+            .map(function (key) {
+                return Fs.writeFileAsync(pkg + '/' + key, result[key]);
+            });
+        });
+}
+
+main(package, _in, out);
+
