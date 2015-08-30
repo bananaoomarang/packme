@@ -18,9 +18,7 @@ var wreckNpm = Wreck.defaults({
 Bluebird.promisifyAll(wreckNpm);
 
 var transform = {
-    name:         function (name) {
-        return { key: 'pkgname', val: 'npm-' + name }
-    },
+    name:         'pkgname',
     version:      'pkgver',
     description:  'pkgdesc',
     cpu:          'arch',
@@ -64,6 +62,8 @@ module.exports = function npmin(pkgname) {
 
                 defaultVal(pkgJSON, 'arch', ['any']);
                 defaultVal(pkgJSON, 'pkgrel', '1');
+                defaultVal(pkgJSON, 'depends', []);
+                defaultVal(pkgJSON, 'makeDepends', []);
 
                 pkgJSON.package = installScript;
 

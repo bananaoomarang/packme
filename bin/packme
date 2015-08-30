@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-var Path     = require('path');
-var Fs       = require('fs');
-var Bluebird = require('bluebird');
-var Mkdirp   = Bluebird.promisify(require('mkdirp'));
+var Path        = require('path');
+var Fs          = require('fs');
+var Bluebird    = require('bluebird');
+var MkdirpAsync = Bluebird.promisify(require('mkdirp'));
 
 Bluebird.promisifyAll(Fs);
 
@@ -24,30 +24,40 @@ var out = require(Path.join('../outs', outto));
 var pkgCache = {};
 
 function main(pkg, i, o) {
+    var prefixedPkgname = [infrom, pkg].join('-');
+
     return i(pkg)
-        .tap(function (result) {
+        .tap(function (transPKG) {
+            //XXX This code ignores versions
+
+            var depends  = Object.keys(transPKG.depends);
+            var prefixed = depends.map(function (dep) { return [infrom, dep].join('-'); });
+
+            transPKG.pkgname = prefixedPkgname;
+            transPKG.depends = prefixed;
+
             return Bluebird.all(
-                Object
-                  .keys(result.depends)
-                  .map(function (dep) {
+                prefixed
+                  .map(function (dep, index) {
                       if(pkgCache[dep])
                           return dep;
 
                       pkgCache[dep] = true;
 
-                      return main(dep, _in, out);
+                      return main(depends[index], i, o);
                   })
             );
         })
-        .then(o)
-        .then(function (result) {
-            return Bluebird.all(
-                Object.keys(result)
-            )
-            .tap(Mkdirp.bind(null, pkg))
-            .map(function (key) {
-                return Fs.writeFileAsync(pkg + '/' + key, result[key]);
-            });
+        .tap(function (transPKG) {
+            return MkdirpAsync(prefixedPkgname);
+        })
+        .then(function (transPKG) {
+            var result = o(transPKG);
+
+            return Bluebird.all(Object.keys(result))
+                .map(function (key) {
+                    return Fs.writeFileAsync(prefixedPkgname + '/' + key, result[key]);
+                });
         });
 }
 
