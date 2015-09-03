@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+'use strict';
+
 var Path        = require('path');
 var Fs          = require('fs');
 var Bluebird    = require('bluebird');
@@ -7,19 +9,21 @@ var MkdirpAsync = Bluebird.promisify(require('mkdirp'));
 
 Bluebird.promisifyAll(Fs);
 
+var IO_DIR = process.env.PACKME_IO_DIR || '../ios';
+
 var argv = require('yargs')
   .usage('Usage: packme <package> <infrom> <outto>')
   .demand(3)
   .argv;
 
-var package = argv._[0];
-var infrom  = argv._[1];
-var outto   = argv._[2];
+var pkg    = argv._[0];
+var infrom = argv._[1];
+var outto  = argv._[2];
 
-var pkgdir  = Path.join(process.cwd(), package);
+var pkgdir  = Path.join(process.cwd(), pkg);
 
-var _in = require(Path.join('../ins',  infrom))
-var out = require(Path.join('../outs', outto));
+var _in = require(Path.join(IO_DIR, infrom)).i
+var out = require(Path.join(IO_DIR, outto)).o;
 
 var pkgCache = {};
 
@@ -42,24 +46,26 @@ function main(pkg, i, o) {
                       if(pkgCache[dep])
                           return dep;
 
+                      console.log(dep);
                       pkgCache[dep] = true;
 
                       return main(depends[index], i, o);
                   })
             );
         })
-        .tap(function (transPKG) {
-            return MkdirpAsync(prefixedPkgname);
-        })
         .then(function (transPKG) {
-            var result = o(transPKG);
+            return MkdirpAsync(prefixedPkgname)
+                .return(o(transPKG))
+                .then(function (transPKG) {
+                    var result = o(transPKG);
 
-            return Bluebird.all(Object.keys(result))
-                .map(function (key) {
-                    return Fs.writeFileAsync(prefixedPkgname + '/' + key, result[key]);
+                    return Bluebird.all(Object.keys(result))
+                        .map(function (key) {
+                            return Fs.writeFileAsync(prefixedPkgname + '/' + key, result[key]);
+                        });
                 });
         });
 }
 
-main(package, _in, out);
+main(pkg, _in, out);
 

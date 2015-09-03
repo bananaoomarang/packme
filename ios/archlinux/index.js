@@ -1,4 +1,5 @@
-var Fs = require('fs');
+var Bluebird      = require('bluebird');
+var ExecFileAsync = Bluebird.promisify(require('child_process').execFile);
 
 function isString(x) {
     return typeof x === 'string';
@@ -21,7 +22,12 @@ function isFunc(key) {
     }).length;
 }
 
-module.exports = function (cfg) {
+function _in (cfg) {
+  // XXX 
+  return null;
+};
+
+function out (cfg) {
     var PKGBUILD = '';
     var keys = Object.keys(cfg);
 
@@ -83,4 +89,9 @@ module.exports = function (cfg) {
     return {
         PKGBUILD: PKGBUILD
     };
+};
+
+module.exports = {
+  i: _in,
+  o: out
 }

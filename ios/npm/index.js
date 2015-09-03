@@ -18,7 +18,7 @@ var wreckNpm = Wreck.defaults({
 
 Bluebird.promisifyAll(wreckNpm);
 
-var transform = {
+var in_transform = {
     name:         'pkgname',
     name:         'npmpkgname',
     version:      'pkgver',
@@ -52,15 +52,11 @@ function defaultVal(obj, key, val) {
         obj[key] = val;
 }
 
-var pkgCache = {};
-
-module.exports = function npmin(pkgname) {
-    pkgCache[pkgname] = true;
-
+function _in(pkgname) {
     return wreckNpm
         .getAsync(Path.join(pkgname, 'latest'))
             .spread(function (res, body) {
-                var pkgJSON = objectMap(body, transform);
+                var pkgJSON = objectMap(body, in_transform);
 
                 defaultVal(pkgJSON, 'arch', ['any']);
                 defaultVal(pkgJSON, 'pkgrel', '1');
@@ -73,3 +69,13 @@ module.exports = function npmin(pkgname) {
                 return pkgJSON;
             });
 }
+
+function out(cfg) {
+  // XXX
+  return null;
+}
+
+module.exports = {
+  i: _in,
+  o: out
+};

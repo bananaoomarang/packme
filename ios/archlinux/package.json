@@ -1,15 +1,18 @@
 {
-  "name": "npm",
+  "name": "packme-archlinux",
   "version": "1.0.0",
-  "description": "NPM in for packme",
+  "description": "Archlinux IO for Packme",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "packme",
+    "archlinux"
+  ],
   "author": "Milo Mordaunt <milomord@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "bluebird": "^2.9.34",
-    "wreck": "^6.2.0"
+    "bluebird": "^2.9.34"
   }
 }
