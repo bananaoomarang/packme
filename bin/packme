@@ -27,10 +27,10 @@ var out = require(Path.join(IO_DIR, outto)).o;
 
 var pkgCache = {};
 
-function main(pkg, i, o) {
-    var prefixedPkgname = [infrom, pkg].join('-');
+function main(pkgname, i, o) {
+    var prefixedPkgname = [infrom, pkgname].join('-');
 
-    return i(pkg)
+    return i(pkgname)
         .tap(function (transPKG) {
             //XXX This code ignores versions
 
@@ -46,7 +46,6 @@ function main(pkg, i, o) {
                       if(pkgCache[dep])
                           return dep;
 
-                      console.log(dep);
                       pkgCache[dep] = true;
 
                       return main(depends[index], i, o);
@@ -56,9 +55,7 @@ function main(pkg, i, o) {
         .then(function (transPKG) {
             return MkdirpAsync(prefixedPkgname)
                 .return(o(transPKG))
-                .then(function (transPKG) {
-                    var result = o(transPKG);
-
+                .then(function (result) {
                     return Bluebird.all(Object.keys(result))
                         .map(function (key) {
                             return Fs.writeFileAsync(prefixedPkgname + '/' + key, result[key]);

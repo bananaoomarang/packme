@@ -7,8 +7,9 @@ var installScript =`
 local _npmdir="$pkdir/usr/lib/node_modules"
 mkdir -p $_npmdir
 cd $_npmdir
-ls
-npm i -g --prefix "$pkgdir/usr" $npmpkgname@$pkgver
+mkdir -p $pkgdir/usr/lib/node_modules/$npmpkgname
+cp -r $srcdir/package/* $pkgdir/usr/lib/node_modules/$npmpkgname
+chmod 655 -R $pkgdir/usr/lib/node_modules/$npmpkgname
 `;
 
 var wreckNpm = Wreck.defaults({
@@ -53,6 +54,7 @@ function defaultVal(obj, key, val) {
 }
 
 function _in(pkgname) {
+    console.log(pkgname);
     return wreckNpm
         .getAsync(Path.join(pkgname, 'latest'))
             .spread(function (res, body) {

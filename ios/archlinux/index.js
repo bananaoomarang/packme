@@ -1,5 +1,13 @@
+'use strict';
+
 var Bluebird      = require('bluebird');
+var Fs            = require('fs');
+var Path          = require('path');
+var MkdirpAsync   = Bluebird.promisify(require('mkdirp'));
+var RimRafAsync   = Bluebird.promisify(require('rimraf'));
 var ExecFileAsync = Bluebird.promisify(require('child_process').execFile);
+
+Bluebird.promisifyAll(Fs);
 
 function isString(x) {
     return typeof x === 'string';
@@ -7,7 +15,7 @@ function isString(x) {
 
 function isObject(x) {
     return (typeof x === 'object' &&
-            !(x instanceof Array));
+        !(x instanceof Array));
 }
 
 function isFunc(key) {
@@ -23,11 +31,36 @@ function isFunc(key) {
 }
 
 function _in (cfg) {
-  // XXX 
+  // XXX
   return null;
-};
+}
+
 
 function out (cfg) {
+
+    function makePackage(path) {
+        var args = [
+            '--nodeps',
+            '--cleanbuild'
+        ];
+
+        var opts = {
+            cwd: path
+        }
+
+        var packageFile   = [cfg.pkgname, cfg.pkgver, cfg.pkgrel, cfg.arch].join('-') + '.pkg.tar.xz';
+        var pathToPackage = Path.join(process.cwd(), path, packageFile);
+
+        return ExecFileAsync('makepkg', args, opts)
+            .then(function () {
+                return Fs.readFileAsync(pathToPackage);
+            })
+            .catch(function (e) {
+                // XXX
+                throw e;
+            });
+    }
+
     var PKGBUILD = '';
     var keys = Object.keys(cfg);
 
@@ -36,7 +69,7 @@ function out (cfg) {
           return (isString(cfg[key]) && !isFunc(key));
       })
       .forEach(function (key) {
-          PKGBUILD += [key, '\'' + cfg[key] + '\''].join('=');
+          PKGBUILD += [key, '"' + cfg[key] + '"'].join('=');
           PKGBUILD += '\n';
       });
 
@@ -86,12 +119,32 @@ function out (cfg) {
             PKGBUILD += func + '\n';
         });
 
-    return {
-        PKGBUILD: PKGBUILD
-    };
-};
+    var TMP_DIR = cfg.pkgname + '-tmp';
+
+    return RimRafAsync(TMP_DIR)
+        .then(function () {
+            return MkdirpAsync(TMP_DIR)
+        })
+        .then(function () {
+            return Fs.writeFileAsync(TMP_DIR + '/' + 'PKGBUILD', PKGBUILD);
+        })
+        .then(function () {
+            return makePackage(TMP_DIR)
+        })
+        .tap(function () {
+            return RimRafAsync(TMP_DIR);
+        })
+        .then(function (result) {
+            return {
+                [cfg.pkgname + '.pkg.tar.xz']: result
+            }
+        })
+        .catch(function (e) {
+            throw e;
+        });
+}
 
 module.exports = {
   i: _in,
   o: out
-}
+};
